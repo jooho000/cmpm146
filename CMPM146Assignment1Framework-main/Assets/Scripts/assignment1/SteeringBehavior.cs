@@ -16,6 +16,8 @@ public class SteeringBehavior : MonoBehaviour
 
     public float turnRate = 5f;
 
+    public bool hasArrived = false;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -37,11 +39,20 @@ public class SteeringBehavior : MonoBehaviour
         Vector3 direction = target - transform.position;
         float distance = direction.magnitude;
 
+        if (distance < stopDistance) {
+            hasArrived = true;
+            kinematic.SetDesiredSpeed(0f);
+            kinematic.SetDesiredRotationalVelocity(0f);
+            return;
+        }
+
         float desiredSpeed;
         if (distance < slowRadius)
+        {   
+            desiredSpeed = distance / slowRadius * kinematic.max_speed;
+        }
+        else
         {
-            desiredSpeed = distance / kinematic.max_speed;
-        } else {
             desiredSpeed = kinematic.max_speed;
         }
 
@@ -57,6 +68,7 @@ public class SteeringBehavior : MonoBehaviour
     {
         this.target = target;
         EventBus.ShowTarget(target);
+        this.hasArrived = false;
     }
 
     public void SetPath(List<Vector3> path)
@@ -67,6 +79,7 @@ public class SteeringBehavior : MonoBehaviour
     public void SetMap(List<Wall> outline)
     {
         this.path = null;
+        this.hasArrived = false;
         this.target = transform.position;
     }
 }
