@@ -1,7 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
-using Unity.Mathematics;
 
 public class SteeringBehavior : MonoBehaviour
 {
@@ -12,6 +11,7 @@ public class SteeringBehavior : MonoBehaviour
     // like the distance to the (next) target
     public TextMeshProUGUI label;
     public float slowRadius = 15f;
+    public float nextPathPointRadius = 15f;
     public float stopDistance = 0.5f;
 
     public float turnRate = 5f;
@@ -36,20 +36,61 @@ public class SteeringBehavior : MonoBehaviour
         // you can use kinematic.SetDesiredSpeed(...) and kinematic.SetDesiredRotationalVelocity(...)
         //    to "request" acceleration/decceleration to a target speed/rotational velocity
 
-        Vector3 direction = target - transform.position;
+        Vector3 nextTarget;
+        float nextSlowRadius;
+        float nextStopRadius;
+        float nextEndSpeed;
+
+        if (path != null && path.Count > 1)
+        {
+            float turnAngle = Vector3.Angle(transform.forward, path[1] - path[0]);
+
+            nextTarget = path[0];
+            nextSlowRadius = slowRadius * turnAngle / 180f;
+            nextStopRadius = stopDistance + (nextPathPointRadius - stopDistance) * turnAngle / 180f;
+            nextEndSpeed = kinematic.max_speed * (1f - turnAngle / 180f);
+        }
+        else
+        {
+            if (path != null) nextTarget = path[0];
+            else nextTarget = target;
+            nextSlowRadius = slowRadius;
+            nextStopRadius = stopDistance;
+            nextEndSpeed = 0f;
+        }
+
+
+        Vector3 direction = nextTarget - transform.position;
         float distance = direction.magnitude;
 
-        if (distance < stopDistance) {
-            hasArrived = true;
+        if (distance < nextStopRadius)
+        {
+            if (path != null)
+            {
+                path.RemoveAt(0);
+                if (path.Count == 0)
+                {
+                    path = null;
+                    hasArrived = true;
+                }
+            }
+            else
+            {
+                hasArrived = true;
+            }
+        }
+
+        if (hasArrived)
+        {
             kinematic.SetDesiredSpeed(0f);
             kinematic.SetDesiredRotationalVelocity(0f);
             return;
         }
 
         float desiredSpeed;
-        if (distance < slowRadius)
+        if (distance < nextSlowRadius)
         {   
-            desiredSpeed = distance / slowRadius * kinematic.max_speed;
+            desiredSpeed = distance / nextSlowRadius * (kinematic.max_speed - nextEndSpeed) + nextEndSpeed;
         }
         else
         {
@@ -67,19 +108,21 @@ public class SteeringBehavior : MonoBehaviour
     public void SetTarget(Vector3 target)
     {
         this.target = target;
+        path = null;
         EventBus.ShowTarget(target);
-        this.hasArrived = false;
+        hasArrived = false;
     }
 
     public void SetPath(List<Vector3> path)
     {   
         this.path = path;
+        hasArrived = false;
     }
 
     public void SetMap(List<Wall> outline)
     {
-        this.path = null;
-        this.hasArrived = false;
-        this.target = transform.position;
+        path = null;
+        hasArrived = false;
+        target = transform.position;
     }
 }
