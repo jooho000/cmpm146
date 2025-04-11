@@ -1070,7 +1070,7 @@ MonoBehaviour:
   path: []
   label: {fileID: 200820899}
   slowRadius: 18
-  nextPathPointRadius: 45
+  nextPathPointRadius: 35
   stopDistance: 1
   turnRate: 2.2
   hasArrived: 0

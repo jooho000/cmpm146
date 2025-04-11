@@ -37,7 +37,8 @@ public class SteeringBehavior : MonoBehaviour
         //    to "request" acceleration/decceleration to a target speed/rotational velocity
 
         Vector3 nextTarget;
-        float nextSlowRadius;
+        float maxSpeedRadius;
+        float minSpeedRadius;
         float nextStopRadius;
         float nextEndSpeed;
 
@@ -46,15 +47,17 @@ public class SteeringBehavior : MonoBehaviour
             float turnAngle = Vector3.Angle(transform.forward, path[1] - path[0]);
 
             nextTarget = path[0];
-            nextSlowRadius = slowRadius * turnAngle / 180f;
             nextStopRadius = stopDistance + (nextPathPointRadius - stopDistance) * turnAngle / 180f;
+            maxSpeedRadius = (slowRadius + nextPathPointRadius) * turnAngle / 180f;
+            minSpeedRadius = nextPathPointRadius;
             nextEndSpeed = kinematic.max_speed * (1f - turnAngle / 180f);
         }
         else
         {
-            if (path != null) nextTarget = path[0];
+            if (path != null && path.Count > 0) nextTarget = path[0];
             else nextTarget = target;
-            nextSlowRadius = slowRadius;
+            maxSpeedRadius = slowRadius;
+            minSpeedRadius = 0f;
             nextStopRadius = stopDistance;
             nextEndSpeed = 0f;
         }
@@ -88,9 +91,10 @@ public class SteeringBehavior : MonoBehaviour
         }
 
         float desiredSpeed;
-        if (distance < nextSlowRadius)
-        {   
-            desiredSpeed = distance / nextSlowRadius * (kinematic.max_speed - nextEndSpeed) + nextEndSpeed;
+        if (distance < maxSpeedRadius)
+        {
+            float speedFactor = Mathf.InverseLerp(minSpeedRadius, maxSpeedRadius, distance);
+            desiredSpeed = Mathf.Lerp(nextEndSpeed, kinematic.max_speed, speedFactor);
         }
         else
         {
